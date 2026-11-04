@@ -1,0 +1,70 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+*.pyc
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover
+
+# Type checkers
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Linters / formatters
+.ruff_cache/
+
+# Distribution / packaging
+*.whl
+MANIFEST
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# Project-specific
+workspaces/
+artifacts/
+*.db
+*.db-shm
+*.db-wal
+logs/
+*.log
+config/profiles/*
+!config/profiles/.gitkeep
+config/rules/*
+!config/rules/.gitkeep
+config/workflows/*
+!config/workflows/.gitkeep
+

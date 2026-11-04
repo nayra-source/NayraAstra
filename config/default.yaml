@@ -1,0 +1,25 @@
+# NAYRAASTRA – default application configuration
+# This file is embedded in the package and loaded first.
+# Override values in $NAYRAASTRA_HOME/config.yaml or via environment variables.
+# Environment variable format: NAYRAASTRA_<SECTION>__<KEY>=value
+# Example: NAYRAASTRA_LOGGING__LEVEL=DEBUG
+
+logging:
+  level: INFO
+  file_enabled: true
+  json_format: false
+
+database:
+  filename: nayraastra.db
+  wal: true
+  busy_timeout_ms: 5000
+
+execution:
+  default_timeout_seconds: 300
+  max_parallel_tasks: 4
+  rate_limit_per_second: 10.0
+
+safety:
+  max_intrusiveness: active-safe
+  disruptive_enabled: false
+
