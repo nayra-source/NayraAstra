@@ -42,6 +42,7 @@ dev = [
     "mypy",
     "types-PyYAML",
     "pre-commit",
+    "hypothesis",
 ]
 
 [project.scripts]
@@ -58,12 +59,17 @@ target-version = "py311"
 select = ["E", "F", "I", "UP", "B", "SIM", "S", "C4", "PL"]
 ignore = [
     "E501",    # line too long (handled by formatter)
+    "PLR0911", # too many return statements
+    "PLR0912", # too many branches
     "PLR0913", # too many arguments
+    "PLR0915", # too many statements
+    "PLR0917", # too many positional arguments
     "PLR2004", # magic value comparison
+    "SIM118",  # sqlite3.Row requires .keys() for column containment
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["S101", "S106", "S603", "PLR0913"]
+"tests/**/*.py" = ["S101", "S105", "S106", "S603", "PLR0913", "PLR0915", "PLR0917"]
 
 [tool.ruff.format]
 quote-style = "double"

@@ -22,3 +22,6 @@ execution:
 safety:
   max_intrusiveness: active-safe
   disruptive_enabled: false
+
+adapters:
+  fake_enabled: false

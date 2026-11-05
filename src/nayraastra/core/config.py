@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import contextlib
 import os
-from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -25,7 +24,11 @@ import yaml
 from pydantic import BaseModel, field_validator, model_validator
 from pydantic import ValidationError as PydanticValidationError
 
+from nayraastra.core.domain.types import Intrusiveness
 from nayraastra.core.errors import ConfigError
+
+# Backwards compatibility alias for Phase 0 callers
+IntrusivenessLevel = Intrusiveness
 
 # Circular-import note: ``core.paths`` imports nothing from ``core.config``,
 # so a module-level import here is safe.  We keep it at module level to satisfy
@@ -97,29 +100,26 @@ class ExecutionConfig(BaseModel, frozen=True):
         return value
 
 
-class IntrusivenessLevel(StrEnum):
-    """Intrusiveness tiers for the Scope Guard safety policy."""
-
-    PASSIVE = "passive"
-    ACTIVE_SAFE = "active-safe"
-    ACTIVE_INTRUSIVE = "active-intrusive"
-    DISRUPTIVE = "disruptive"
-
-
 class SafetyConfig(BaseModel, frozen=True):
     """Safety and intrusiveness policy configuration."""
 
-    max_intrusiveness: IntrusivenessLevel = IntrusivenessLevel.ACTIVE_SAFE
+    max_intrusiveness: Intrusiveness = Intrusiveness.ACTIVE_SAFE
     disruptive_enabled: bool = False
 
     @model_validator(mode="after")
     def _disruptive_guard(self) -> SafetyConfig:
-        if self.max_intrusiveness == IntrusivenessLevel.DISRUPTIVE and not self.disruptive_enabled:
+        if self.max_intrusiveness == Intrusiveness.DISRUPTIVE and not self.disruptive_enabled:
             raise ValueError(
                 "max_intrusiveness=disruptive requires disruptive_enabled=true. "
                 "Set this explicitly to confirm you understand the risk."
             )
         return self
+
+
+class AdaptersConfig(BaseModel, frozen=True):
+    """Adapter subsystem configuration."""
+
+    fake_enabled: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -134,6 +134,7 @@ class AppConfig(BaseModel, frozen=True, extra="forbid"):
     database: DatabaseConfig = DatabaseConfig()
     execution: ExecutionConfig = ExecutionConfig()
     safety: SafetyConfig = SafetyConfig()
+    adapters: AdaptersConfig = AdaptersConfig()
 
 
 # ---------------------------------------------------------------------------
