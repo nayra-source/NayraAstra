@@ -9,12 +9,17 @@ logic itself.
 
 ---
 
-## Status: Phase 0 — Foundations
+## Status: Phase 1 — Core Skeleton & Safety Spine
 
-The project skeleton, core infrastructure, and database layer are in place.
-No scanning adapters, workflow engine, or interactive TUI exist yet.
+Phase 1 is complete. The safety-critical core engine is operational:
+- **Per-Engagement Workspaces**: Isolated SQLite database, artifacts, and logs per engagement (`ADR-010`).
+- **Scope Guard & ROE Gate**: Strict target normalization, deny-by-default CIDR containment, wildcard subdomains, and DNS rebinding prevention.
+- **Tamper-Evident Audit Log**: SHA-256 hash chaining, sensitive key redaction, and database-level trigger immutability (`ADR-011`).
+- **Adapter Contracts & Process Runner**: Safe non-shell execution (`shell=False`), process group termination, and deterministic synthetic fake adapters.
+- **Sequential Scheduler & Typed Event Bus**: Clamped single-worker execution with rate limiting, fault-isolated in-process events, and clean terminal state transitions.
+- **Composition Root**: `src/nayraastra/runtime.py` wires concrete repositories and services while keeping `core` cleanly isolated (`ADR-009`).
 
-See [`docs/ROADMAP.md`](docs/ROADMAP.md) for planned phases.
+See [`docs/ROADMAP.md`](docs/ROADMAP.md) and [`docs/SAFETY_MODEL.md`](docs/SAFETY_MODEL.md).
 
 ---
 
@@ -75,17 +80,18 @@ make clean      # remove caches and build artefacts
 
 ```
 src/nayraastra/
-  core/        # errors, paths, config, logging  (no external imports)
-  db/          # connection, migrator, SQL migrations
-  cli/         # entry point (argparse, Phase 0 only)
-  adapters/    # Phase 1+ placeholder
-  modules/     # Phase 1+ placeholder
-  workflow/    # Phase 1+ placeholder
-  context/     # Phase 1+ placeholder
-  results/     # Phase 1+ placeholder
-  reporting/   # Phase 1+ placeholder
+  runtime.py   # Composition root and Runtime/Session facade
+  core/        # Domain models, scope guard, authorizer, audit, events, scheduler (no dependency on other layers)
+  db/          # Connection, migrator, SQL migrations, repository implementations
+  adapters/    # ToolAdapter ABC, registry, process runner, fake adapters
+  cli/         # CLI entry point (argparse doctor, init-db, version)
+  modules/     # Phase 2+ placeholder
+  workflow/    # Phase 2+ placeholder
+  context/     # Phase 2+ placeholder
+  results/     # Phase 2+ placeholder
+  reporting/   # Phase 2+ placeholder
 config/        # default.yaml, profiles/, rules/, workflows/
-docs/          # architecture, conventions, decisions, roadmap
+docs/          # architecture, safety model, conventions, decisions, roadmap
 tests/         # unit/ integration/ fixtures/
 ```
 
@@ -93,7 +99,8 @@ tests/         # unit/ integration/ fixtures/
 
 | Document | Description |
 |---|---|
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Layered architecture, domain model, safety design |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Layered architecture, domain model, ports, composition root |
+| [`docs/SAFETY_MODEL.md`](docs/SAFETY_MODEL.md) | Scope Guard rules table, ROE checks, audit chain, process safety |
 | [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md) | Coding and AI-assistant rules |
-| [`docs/DECISIONS.md`](docs/DECISIONS.md) | ADR log |
+| [`docs/DECISIONS.md`](docs/DECISIONS.md) | ADR log (ADR-001 through ADR-014) |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | Phase roadmap with exit criteria |

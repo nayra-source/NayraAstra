@@ -161,3 +161,99 @@ of application code paths.
 ### Alternatives considered
 Application-level enforcement only (insufficient; can be bypassed by direct DB
 access).  Row-level security (not available in SQLite).
+
+---
+
+## ADR-009: Layering, Ports, and Composition Root
+
+**Date:** 2026-11-05
+**Status:** Accepted
+
+### Context
+Phase 1 introduces complex cross-cutting concerns: persistence, execution, adapters, auditing, and scope enforcement. Without strict boundaries, circular dependencies and tight coupling to SQLite or specific tool runners could easily degrade maintainability.
+
+### Decision
+`core` defines abstract **ports** (`typing.Protocol`) in `src/nayraastra/core/ports.py` for all persistence repositories, audit sinks, workspace providers, tool adapters, and registries.
+- `core` never imports `db`, `cli`, `modules`, `adapters`, or `runtime`.
+- Concrete implementations are located in `src/nayraastra/db/` and `src/nayraastra/adapters/`.
+- A single composition root `src/nayraastra/runtime.py` wires concrete dependencies together and exposes a high-level `Runtime` facade.
+- Enforced automatically by AST-based test `tests/unit/test_architecture.py`.
+
+---
+
+## ADR-010: One SQLite Database per Engagement Workspace
+
+**Date:** 2026-11-05
+**Status:** Accepted
+
+### Context
+Pentesting engagements require strict evidentiary containment, workspace portability (e.g. archiving or transmitting an engagement as a tarball), and operational safety against accidental cross-engagement contamination.
+
+### Decision
+Each engagement has its own isolated directory `<home>/workspaces/<engagement_id>/` containing:
+- `nayraastra.db` (self-contained SQLite database with engagement, scope, tasks, findings, evidence, artifacts, and audit log)
+- `artifacts/` (directory for tool outputs, pcaps, and evidentiary data)
+- `logs/` (directory for execution logs)
+
+A global index `<home>/engagements.json` is updated atomically using tempfiles and atomic file replace (`os.replace`) to index known engagements.
+
+---
+
+## ADR-011: Tamper-Evident Hash-Chained Audit Log
+
+**Date:** 2026-11-05
+**Status:** Accepted
+
+### Context
+Forensic, compliance, and legal standards require that all operations within an engagement have verifiable integrity. If an attacker modifies or deletes entries directly in SQLite, the system must detect it.
+
+### Decision
+1. Immutability triggers: SQLite `BEFORE UPDATE` and `BEFORE DELETE` triggers abort any mutation on `audit_log`.
+2. SHA-256 hash chaining: Each entry records `prev_hash` (the previous entry's `entry_hash` or a 64-zero genesis hash) and `entry_hash` computed over canonical JSON representation of `(logged_at, event_type, actor, entity_type, entity_id, payload, prev_hash)`.
+3. Offline verifier: `verify_chain(entries) -> ChainReport` detects tampering, reordering, insertion, or truncation.
+
+---
+
+## ADR-012: Sequential Async Scheduler with Rate Limiting
+
+**Date:** 2026-11-05
+**Status:** Accepted
+
+### Context
+Phase 1 focuses on core execution correctness and safety. Parallel execution of pentesting tools before robust workflow dependency modeling and resource governance is unsafe.
+
+### Decision
+Scheduler executes tasks strictly sequentially (concurrency clamped to 1 in Phase 1).
+- Uses `asyncio` for non-blocking process supervision.
+- Implements a token bucket rate limiter (`AsyncRateLimiter`) to obey global rate limits.
+- Supports dry-run execution without invoking external tool adapters.
+- Interrupted or abandoned tasks in `RUNNING` status are recovered upon startup.
+
+---
+
+## ADR-013: Injectable Clock and IdGenerator Protocols
+
+**Date:** 2026-11-05
+**Status:** Accepted
+
+### Context
+Direct calls to `datetime.now()` and `uuid.uuid4()` lead to non-deterministic tests, flakiness, and difficulties verifying time-window boundaries in Rules of Engagement.
+
+### Decision
+Define `@runtime_checkable` protocols `Clock` and `IdGenerator` in `src/nayraastra/core/domain/time_id.py`.
+- Production uses `UtcClock` (always timezone-aware UTC) and `UuidGenerator`.
+- Testing uses `FrozenClock` (advanceable) and `StaticIdGenerator` / `SequenceIdGenerator`.
+- Domain services and repositories require injected clock/ID instances.
+
+---
+
+## ADR-014: Hypothesis Dev Dependency for Scope Matching Property Tests
+
+**Date:** 2026-11-05
+**Status:** Accepted
+
+### Context
+Scope Guard CIDR containment, IP normalization, and wildcard domain matching are security-critical boundaries where edge cases (such as zero-padding, CIDR overlaps, apex domains) could cause serious accidental scanning of out-of-scope targets.
+
+### Decision
+Include `hypothesis` in optional `dev` dependencies. Use property-based testing in `tests/unit/test_scope.py` to assert idempotency, CIDR invariants, and invalid IP boundary rejection across thousands of randomized inputs. Zero runtime dependencies are added.

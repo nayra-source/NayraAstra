@@ -1,6 +1,6 @@
 # NAYRAASTRA – Roadmap
 
-## Phase 0 — Foundations *(current)*
+## Phase 0 — Foundations *(completed)*
 
 **Goal:** Project skeleton, core infrastructure, database layer, minimal CLI.
 
@@ -15,28 +15,35 @@
 
 ---
 
-## Phase 1 — Adapter Infrastructure & Scope Guard *(planned)*
+## Phase 1 — Core Skeleton & Safety Spine *(completed)*
 
-**Goal:** First real adapters (Nmap, TShark), Scope Guard, task scheduler.
+**Goal:** Safety-critical engine core: engagements, scope enforcement, audit chaining, adapter contracts, task state machine, sequential scheduler, event bus, and runtime composition root proven with fake adapters.
 
 **Exit criteria:**
-- `NmapAdapter` and `TSharkAdapter` parse real tool output into `Observation` rows.
-- Scope Guard validates targets against `scope_entries`; out-of-scope tasks are blocked.
-- Async task executor respects `max_parallel_tasks` and `rate_limit_per_second`.
-- `--dry-run` mode plans but does not execute.
-- Integration tests cover a local scan against `127.0.0.1`.
+- [x] Pure Pydantic v2 domain models (`core/domain/`) with injectable `Clock` and `IdGenerator`.
+- [x] Strict target normalization and Scope Guard (`core/scope/`) rejecting argument injection (`-` prefix), CIDR containment, wildcard subdomains, and DNS rebinding.
+- [x] Task Authorizer gate enforcing ROE window, intrusiveness ceilings, disruptive double opt-in, and capability filters.
+- [x] Tamper-evident hash-chained audit logging (`prev_hash`, `entry_hash`, SHA-256) with trigger-based SQL immutability and offline chain verification.
+- [x] One SQLite DB per engagement workspace (`workspaces/<id>/nayraastra.db`) and atomic global index (`engagements.json`).
+- [x] Async process runner (`shell=False`, argument lists only, process group kill on cancel/timeout, env allowlisting).
+- [x] Synthetic deterministic fake adapters (`FakeAdapter`, `FakeDisruptiveAdapter`) with test control switches.
+- [x] Sequential async scheduler with rate limiting (token bucket) and dry-run execution.
+- [x] In-process typed domain event bus (`core/events/`) with subscriber fault isolation and output sanitization.
+- [x] Layering and composition root (`runtime.py`) verified by AST architecture tests.
+- [x] End-to-end integration test (`tests/integration/test_phase1_e2e.py`) validating the complete lifecycle.
+- [x] All 189 tests passing, 85.6% test coverage, strict mypy green, ruff format/lint clean.
 
 ---
 
-## Phase 2 — Workflow Engine & TUI *(planned)*
+## Phase 2 — Real Tool Adapters & Workflow Engine *(next)*
 
-**Goal:** YAML workflow definitions, DAG scheduler, Prompt Toolkit TUI.
+**Goal:** First real tool adapters (Nmap, TShark), YAML workflow DAG engine, parallel scheduling, and Prompt Toolkit TUI.
 
 **Exit criteria:**
-- Workflow YAML parsed and validated by Pydantic.
-- DAG executor resolves dependencies and runs modules in order.
-- Prompt Toolkit interactive menu replaces argparse shell.
-- Live Rich panels show running tasks and progress.
+- `NmapAdapter` and `TSharkAdapter` wrap tools via subprocess without `shell=True` and parse outputs into `Observation` records.
+- YAML workflow definitions parsed into DAG and executed by workflow engine.
+- Scheduler concurrency unconstrained from Phase 1 sequential clamp to configurable `max_parallel_tasks`.
+- Prompt Toolkit interactive TUI with Rich live progress panels.
 
 ---
 
