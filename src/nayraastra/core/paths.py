@@ -139,4 +139,3 @@ def get_workspace_dir(engagement_id: str) -> Path:
     (workspace / "artifacts").mkdir(mode=0o700, exist_ok=True)
     (workspace / "raw").mkdir(mode=0o700, exist_ok=True)
     return workspace
-

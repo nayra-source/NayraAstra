@@ -6,4 +6,3 @@ Keeps adapters decoupled from one another and from the database layer.
 
 No implementation in Phase 0.
 """
-

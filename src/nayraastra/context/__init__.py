@@ -6,4 +6,3 @@ workflow run.  It is passed explicitly to every module and adapter.
 
 No implementation in Phase 0.
 """
-

@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import sqlite3
 from collections.abc import Generator
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from pathlib import Path
 
 from nayraastra.core.errors import DatabaseError
@@ -87,33 +87,25 @@ def transaction(conn: sqlite3.Connection) -> Generator[sqlite3.Connection, None,
     Raises
     ------
     DatabaseError
-        On commit or rollback failures.
+        On commit failures or ``sqlite3.Error`` raised during the body.
     """
     try:
         yield conn
         try:
             conn.commit()
         except sqlite3.Error as exc:
-            raise DatabaseError(
-                f"Transaction commit failed: {exc}",
-            ) from exc
+            raise DatabaseError(f"Transaction commit failed: {exc}") from exc
     except DatabaseError:
-        # Already wrapped; just rollback and re-raise.
-        try:
+        # Already wrapped; rollback and re-raise.
+        with suppress(sqlite3.Error):
             conn.rollback()
-        except sqlite3.Error:
-            pass  # Suppress rollback errors – original error is more important.
         raise
     except sqlite3.Error as exc:
-        # Wrap raw sqlite3 errors (e.g. IntegrityError during execute) in DatabaseError.
-        try:
+        # Wrap raw sqlite3 errors (e.g. IntegrityError during execute).
+        with suppress(sqlite3.Error):
             conn.rollback()
-        except sqlite3.Error:
-            pass
         raise DatabaseError(f"Database operation failed: {exc}") from exc
     except Exception:
-        try:
+        with suppress(sqlite3.Error):
             conn.rollback()
-        except sqlite3.Error:
-            pass
         raise

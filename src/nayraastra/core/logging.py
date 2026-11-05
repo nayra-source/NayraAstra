@@ -48,7 +48,7 @@ class ControlCharFilter(logging.Filter):
     can be manipulated by escape sequences embedded in tool output.
     """
 
-    def filter(self, record: logging.LogRecord) -> bool:  # type: ignore[override]
+    def filter(self, record: logging.LogRecord) -> bool:
         record.msg = _CONTROL_RE.sub("", str(record.msg))
         # Also sanitise exception text if present.
         if record.exc_text:

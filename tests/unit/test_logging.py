@@ -56,7 +56,7 @@ class TestSetupLogging:
         logger.info("test json message")
         log_file = tmp_path / "nayraastra.log"
         content = log_file.read_text()
-        lines = [l for l in content.strip().splitlines() if l]
+        lines = [line for line in content.strip().splitlines() if line]
         assert len(lines) >= 1
         parsed = json.loads(lines[0])
         assert "message" in parsed

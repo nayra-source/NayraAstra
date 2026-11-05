@@ -6,11 +6,13 @@ real home directory (``~/.nayraastra``).
 
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 
 import pytest
 
 from nayraastra.db.connection import connect
+from nayraastra.db.migrator import migrate
 
 
 @pytest.fixture()
@@ -24,8 +26,7 @@ def fake_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 @pytest.fixture()
 def temp_db(tmp_path: Path) -> sqlite3.Connection:
-    """Return an open in-memory SQLite connection for fast unit tests."""
-
+    """Return an open SQLite connection for fast unit tests."""
     db_path = tmp_path / "test.db"
     return connect(db_path)
 
@@ -33,7 +34,5 @@ def temp_db(tmp_path: Path) -> sqlite3.Connection:
 @pytest.fixture()
 def migrated_db(temp_db: sqlite3.Connection) -> sqlite3.Connection:
     """Return a fully migrated SQLite connection."""
-    from nayraastra.db.migrator import migrate
-
     migrate(temp_db)
     return temp_db

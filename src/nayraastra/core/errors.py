@@ -85,4 +85,3 @@ class NotImplementedPhaseError(NayraastraError):
     """
 
     default_code = "NOT_IMPLEMENTED_PHASE"
-

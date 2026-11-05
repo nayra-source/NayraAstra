@@ -30,7 +30,7 @@ class TestDefaults:
 
     def test_config_is_frozen(self, fake_home: Path) -> None:
         cfg = load_config()
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             cfg.logging = cfg.logging  # type: ignore[misc]
 
 

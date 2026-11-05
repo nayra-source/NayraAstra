@@ -6,4 +6,3 @@ Adapters are discovered and loaded dynamically by the workflow engine.
 
 No implementation in Phase 0.
 """
-

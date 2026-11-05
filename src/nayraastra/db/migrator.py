@@ -140,9 +140,7 @@ def pending(
     return result
 
 
-def migrate(
-    conn: sqlite3.Connection, migrations_dir: Path = _MIGRATIONS_DIR
-) -> list[str]:
+def migrate(conn: sqlite3.Connection, migrations_dir: Path = _MIGRATIONS_DIR) -> list[str]:
     """Apply all pending migrations in version order.
 
     Each migration runs in its own transaction.  On success the

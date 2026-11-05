@@ -15,8 +15,9 @@ Dependency rule: ``core`` must not import from ``db``, ``cli``, or ``modules``.
 
 from __future__ import annotations
 
+import contextlib
 import os
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +26,11 @@ from pydantic import BaseModel, field_validator, model_validator
 from pydantic import ValidationError as PydanticValidationError
 
 from nayraastra.core.errors import ConfigError
+
+# Circular-import note: ``core.paths`` imports nothing from ``core.config``,
+# so a module-level import here is safe.  We keep it at module level to satisfy
+# ruff PLC0415 and to make the dependency explicit.
+from nayraastra.core.paths import get_home  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Sub-models
@@ -42,12 +48,11 @@ class LoggingConfig(BaseModel, frozen=True):
 
     @field_validator("level", mode="before")
     @classmethod
-    def _normalise_level(cls, v: object) -> str:
+    def _normalise_level(cls, v: Any) -> str:
         normalised = str(v).upper()
         if normalised not in _VALID_LOG_LEVELS:
             raise ValueError(
-                f"Invalid log level {v!r}. "
-                f"Choose from: {', '.join(sorted(_VALID_LOG_LEVELS))}"
+                f"Invalid log level {v!r}. Choose from: {', '.join(sorted(_VALID_LOG_LEVELS))}"
             )
         return normalised
 
@@ -61,8 +66,8 @@ class DatabaseConfig(BaseModel, frozen=True):
 
     @field_validator("busy_timeout_ms", mode="before")
     @classmethod
-    def _positive_timeout(cls, v: object) -> int:
-        value = int(v)  # type: ignore[arg-type]
+    def _positive_timeout(cls, v: Any) -> int:
+        value = int(v)
         if value < 0:
             raise ValueError("busy_timeout_ms must be >= 0")
         return value
@@ -77,22 +82,22 @@ class ExecutionConfig(BaseModel, frozen=True):
 
     @field_validator("max_parallel_tasks", mode="before")
     @classmethod
-    def _positive_parallel(cls, v: object) -> int:
-        value = int(v)  # type: ignore[arg-type]
+    def _positive_parallel(cls, v: Any) -> int:
+        value = int(v)
         if value < 1:
             raise ValueError("max_parallel_tasks must be >= 1")
         return value
 
     @field_validator("rate_limit_per_second", mode="before")
     @classmethod
-    def _positive_rate(cls, v: object) -> float:
-        value = float(v)  # type: ignore[arg-type]
+    def _positive_rate(cls, v: Any) -> float:
+        value = float(v)
         if value <= 0:
             raise ValueError("rate_limit_per_second must be > 0")
         return value
 
 
-class IntrusivenessLevel(str, Enum):
+class IntrusivenessLevel(StrEnum):
     """Intrusiveness tiers for the Scope Guard safety policy."""
 
     PASSIVE = "passive"
@@ -109,10 +114,7 @@ class SafetyConfig(BaseModel, frozen=True):
 
     @model_validator(mode="after")
     def _disruptive_guard(self) -> SafetyConfig:
-        if (
-            self.max_intrusiveness == IntrusivenessLevel.DISRUPTIVE
-            and not self.disruptive_enabled
-        ):
+        if self.max_intrusiveness == IntrusivenessLevel.DISRUPTIVE and not self.disruptive_enabled:
             raise ValueError(
                 "max_intrusiveness=disruptive requires disruptive_enabled=true. "
                 "Set this explicitly to confirm you understand the risk."
@@ -125,15 +127,13 @@ class SafetyConfig(BaseModel, frozen=True):
 # ---------------------------------------------------------------------------
 
 
-class AppConfig(BaseModel, frozen=True):
+class AppConfig(BaseModel, frozen=True, extra="forbid"):
     """Root application configuration object."""
 
     logging: LoggingConfig = LoggingConfig()
     database: DatabaseConfig = DatabaseConfig()
     execution: ExecutionConfig = ExecutionConfig()
     safety: SafetyConfig = SafetyConfig()
-
-    model_config = {"extra": "forbid"}
 
 
 # ---------------------------------------------------------------------------
@@ -158,15 +158,15 @@ def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any
 def _env_overrides() -> dict[str, Any]:
     """Build a nested dict from ``NAYRAASTRA_*`` environment variables.
 
-    Only variables that use ``__`` as a nesting delimiter are treated as config
-    overrides (e.g. ``NAYRAASTRA_LOGGING__LEVEL``).  Simple variables such as
+    Only variables that contain ``__`` are treated as config overrides
+    (e.g. ``NAYRAASTRA_LOGGING__LEVEL``).  Simple variables such as
     ``NAYRAASTRA_HOME`` are ignored here because they are not config keys.
     """
     overrides: dict[str, Any] = {}
     for key, raw_value in os.environ.items():
         if not key.startswith(_ENV_PREFIX):
             continue
-        without_prefix = key[len(_ENV_PREFIX):]
+        without_prefix = key[len(_ENV_PREFIX) :]
 
         # Require at least one nesting delimiter so plain vars like
         # NAYRAASTRA_HOME are not injected into the config dict.
@@ -184,10 +184,8 @@ def _env_overrides() -> dict[str, Any]:
         elif raw_value.isdigit():
             value = int(raw_value)
         else:
-            try:
+            with contextlib.suppress(ValueError):
                 value = float(raw_value)
-            except ValueError:
-                pass
 
         # Nest into dict.
         node = overrides
@@ -229,7 +227,7 @@ def _load_yaml_file(path: Path) -> dict[str, Any]:
             f"Config file {path} must contain a YAML mapping at the top level.",
             details={"path": str(path), "got_type": type(data).__name__},
         )
-    return data  # type: ignore[return-value]
+    return data
 
 
 def _default_yaml_path() -> Path:
@@ -270,8 +268,6 @@ def load_config(path: Path | None = None) -> AppConfig:
         user_data = _load_yaml_file(path)
         merged = _deep_merge(merged, user_data)
     else:
-        from nayraastra.core.paths import get_home  # local import avoids circular
-
         user_path = get_home() / "config.yaml"
         if user_path.exists():
             user_data = _load_yaml_file(user_path)

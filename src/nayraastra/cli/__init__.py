@@ -63,28 +63,28 @@ def _cmd_doctor() -> int:
     )
 
     # Config load
+    cfg = None
     try:
         cfg = load_config()
         table.add_row("Config loaded", "[green]OK[/green]", "default.yaml + user overrides")
     except ConfigError as exc:
         table.add_row("Config loaded", "[red]FAIL[/red]", str(exc))
-        cfg = None
 
     # Home directory
-    from nayraastra.core.paths import ensure_home
-
+    home = None
     try:
         home = ensure_home()
         table.add_row("Home directory", "[green]OK[/green]", str(home))
     except Exception as exc:  # noqa: BLE001
         table.add_row("Home directory", "[red]FAIL[/red]", str(exc))
-        home = None
 
     # DB init and migration
     if cfg is not None and home is not None:
         db_path = home / cfg.database.filename
         try:
-            conn = connect(db_path, wal=cfg.database.wal, busy_timeout_ms=cfg.database.busy_timeout_ms)
+            conn = connect(
+                db_path, wal=cfg.database.wal, busy_timeout_ms=cfg.database.busy_timeout_ms
+            )
             applied = migrate(conn)
             ver = current_version(conn)
             conn.close()
@@ -99,11 +99,13 @@ def _cmd_doctor() -> int:
 
     # External tools
     for tool in _EXTERNAL_TOOLS:
-        path = shutil.which(tool)
-        if path:
-            table.add_row(f"Tool: {tool}", "[green]FOUND[/green]", path)
+        tool_path = shutil.which(tool)
+        if tool_path:
+            table.add_row(f"Tool: {tool}", "[green]FOUND[/green]", tool_path)
         else:
-            table.add_row(f"Tool: {tool}", "[yellow]MISSING[/yellow]", "not in PATH (informational)")
+            table.add_row(
+                f"Tool: {tool}", "[yellow]MISSING[/yellow]", "not in PATH (informational)"
+            )
 
     console.print(table)
     return 0
@@ -178,11 +180,7 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_doctor()
 
     if args.command == "init-db":
-        if args.path is not None:
-            db_path = args.path
-        else:
-            from nayraastra.core.paths import get_default_db_path
-            db_path = get_default_db_path()
+        db_path = args.path if args.path is not None else get_default_db_path()
         return _cmd_init_db(db_path)
 
     # No sub-command – show help.

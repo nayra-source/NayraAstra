@@ -81,13 +81,13 @@ class TestValidateEngagementId:
     @pytest.mark.parametrize(
         "invalid_id",
         [
-            "",            # empty
-            "../x",        # path traversal
-            "a/b",         # path separator
-            "a\\b",        # backslash
-            "A" * 65,      # too long
-            "hello world", # space
-            "test!@#",     # special chars
+            "",  # empty
+            "../x",  # path traversal
+            "a/b",  # path separator
+            "a\\b",  # backslash
+            "A" * 65,  # too long
+            "hello world",  # space
+            "test!@#",  # special chars
         ],
     )
     def test_invalid_ids_rejected(self, invalid_id: str) -> None:
@@ -124,4 +124,3 @@ class TestGetWorkspaceDir:
         ws1 = get_workspace_dir("repeated")
         ws2 = get_workspace_dir("repeated")
         assert ws1 == ws2
-

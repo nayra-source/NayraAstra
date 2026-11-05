@@ -6,4 +6,3 @@ Scope Guard safety policy.
 
 No implementation in Phase 0.
 """
-

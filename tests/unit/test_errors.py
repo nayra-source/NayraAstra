@@ -60,7 +60,13 @@ class TestSubclasses:
         assert exc.code == expected_code
 
     def test_subclasses_are_nayraastra_errors(self) -> None:
-        for cls in (ConfigError, DatabaseError, MigrationError, ValidationFailure, NotImplementedPhaseError):
+        for cls in (
+            ConfigError,
+            DatabaseError,
+            MigrationError,
+            ValidationFailure,
+            NotImplementedPhaseError,
+        ):
             assert issubclass(cls, NayraastraError)
 
     def test_code_override_in_subclass(self) -> None:
@@ -68,6 +74,5 @@ class TestSubclasses:
         assert exc.code == "OVERRIDE"
 
     def test_details_in_subclass(self) -> None:
-        exc = DatabaseError("db fail", details={"path": "/tmp/x.db"})
-        assert exc.details["path"] == "/tmp/x.db"
-
+        exc = DatabaseError("db fail", details={"path": "test.db"})
+        assert exc.details["path"] == "test.db"

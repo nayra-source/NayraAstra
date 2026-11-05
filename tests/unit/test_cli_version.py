@@ -33,6 +33,7 @@ class TestVersionFlag:
             [sys.executable, "-m", "nayraastra", "--version"],
             capture_output=True,
             text=True,
+            check=False,
         )
         assert result.returncode == 0
         combined = result.stdout + result.stderr
@@ -69,4 +70,3 @@ class TestInitDb:
         db_path = tmp_path / "idempotent.db"
         assert main(["init-db", "--path", str(db_path)]) == 0
         assert main(["init-db", "--path", str(db_path)]) == 0
-
