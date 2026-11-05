@@ -20,6 +20,7 @@ See ADR-004 in docs/DECISIONS.md.
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -33,6 +34,7 @@ from nayraastra.core.errors import ConfigError, NayraastraError
 from nayraastra.core.paths import ensure_home, get_default_db_path
 from nayraastra.db.connection import connect
 from nayraastra.db.migrator import current_version, migrate
+from nayraastra.runtime import build_runtime
 
 console = Console()
 
@@ -106,6 +108,26 @@ def _cmd_doctor() -> int:
             table.add_row(
                 f"Tool: {tool}", "[yellow]MISSING[/yellow]", "not in PATH (informational)"
             )
+
+    # Registered Adapters
+    try:
+        rt = build_runtime(home=home, config=cfg)
+        adapters = rt.registry.list_all()
+        adp_names = ", ".join(a.name for a in adapters) if adapters else "none"
+        table.add_row("Registered adapters", "[green]OK[/green]", adp_names)
+        fake_status = (
+            "enabled"
+            if (cfg and cfg.adapters.fake_enabled) or os.environ.get("NAYRAASTRA_DEV") == "1"
+            else "disabled"
+        )
+        table.add_row(
+            "Fake adapter",
+            "[green]ENABLED[/green]" if fake_status == "enabled" else "[dim]DISABLED[/dim]",
+            fake_status,
+        )
+        rt.close()
+    except Exception as exc:  # noqa: BLE001
+        table.add_row("Registered adapters", "[red]FAIL[/red]", str(exc))
 
     console.print(table)
     return 0
