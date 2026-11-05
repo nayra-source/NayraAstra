@@ -67,4 +67,3 @@ config/rules/*
 !config/rules/.gitkeep
 config/workflows/*
 !config/workflows/.gitkeep
-

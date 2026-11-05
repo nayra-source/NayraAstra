@@ -81,4 +81,3 @@ These rules apply to AI coding assistants (GitHub Copilot, Claude, etc.) working
 5. **Placeholders stay empty** – Phase 1+ placeholder packages must remain empty (docstring only) until the phase begins.
 6. **No shell=True, ever** – this is non-negotiable.
 7. **Cite your sources** – if adding a new dependency or technique, record the rationale in `DECISIONS.md` or a code comment.
-

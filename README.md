@@ -97,4 +97,3 @@ tests/         # unit/ integration/ fixtures/
 | [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md) | Coding and AI-assistant rules |
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | ADR log |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | Phase roadmap with exit criteria |
-

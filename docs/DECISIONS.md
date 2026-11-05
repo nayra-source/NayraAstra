@@ -161,4 +161,3 @@ of application code paths.
 ### Alternatives considered
 Application-level enforcement only (insufficient; can be bypassed by direct DB
 access).  Row-level security (not available in SQLite).
-

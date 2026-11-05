@@ -109,4 +109,3 @@
 - All public APIs documented with docstrings and type stubs.
 - Security audit completed; no critical findings outstanding.
 - `v1.0.0` tag released with full changelog.
-

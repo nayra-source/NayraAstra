@@ -12,11 +12,10 @@ repos:
       - id: mypy
         additional_dependencies:
           - pydantic>=2
-          - pydantic-mypy
           - types-PyYAML
           - rich
           - prompt_toolkit
-        args: [--config-file=pyproject.toml]
+        args: [--config-file=pyproject.toml, src]
         pass_filenames: false
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -28,4 +27,3 @@ repos:
       - id: check-added-large-files
         args: [--maxkb=500]
       - id: detect-private-key
-

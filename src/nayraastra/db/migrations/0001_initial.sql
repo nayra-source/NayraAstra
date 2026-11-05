@@ -217,4 +217,3 @@ BEFORE DELETE ON audit_log
 BEGIN
     SELECT RAISE(ABORT, 'audit_log rows are immutable: DELETE is not allowed');
 END;
-
