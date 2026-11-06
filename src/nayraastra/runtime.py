@@ -12,6 +12,7 @@ import sqlite3
 from pathlib import Path
 
 from nayraastra.adapters.fake.adapter import FakeAdapter, FakeDisruptiveAdapter
+from nayraastra.adapters.nmap import NmapAdapter
 from nayraastra.adapters.registry import AdapterRegistry
 from nayraastra.core.audit.logger import AuditLogger
 from nayraastra.core.config import AppConfig, load_config
@@ -235,6 +236,7 @@ def build_runtime(
     )
 
     registry = AdapterRegistry()
+    registry.register(NmapAdapter())
 
     # Enable fake adapters in development or when explicitly enabled
     is_dev = dev or effective_cfg.adapters.fake_enabled or (os.environ.get("NAYRAASTRA_DEV") == "1")

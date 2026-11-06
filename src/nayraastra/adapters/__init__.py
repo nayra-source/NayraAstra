@@ -1,8 +1,24 @@
-"""Adapters package – Phase 1+ placeholder.
+"""Adapters package for security tool wrappers."""
 
-Each adapter wraps a single external tool (e.g. Nmap, TShark) and translates
-its raw output into structured :class:`~nayraastra.results.ToolResult` objects.
-Adapters are discovered and loaded dynamically by the workflow engine.
+from __future__ import annotations
 
-No implementation in Phase 0.
-"""
+from nayraastra.adapters.base import (
+    Estimate,
+    RawResult,
+    RunContext,
+    ToolAdapter,
+    ToolStatus,
+)
+from nayraastra.adapters.nmap import NmapAdapter, parse_nmap_xml
+from nayraastra.adapters.registry import AdapterRegistry
+
+__all__ = [
+    "AdapterRegistry",
+    "Estimate",
+    "NmapAdapter",
+    "RawResult",
+    "RunContext",
+    "ToolAdapter",
+    "ToolStatus",
+    "parse_nmap_xml",
+]

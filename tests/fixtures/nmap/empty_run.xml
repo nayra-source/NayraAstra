@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<nmaprun scanner="nmap" args="nmap -sn -oX empty.xml" start="1700000000" version="7.94">
+  <runstats>
+    <finished time="1700000001" exit="success"/>
+    <hosts up="0" down="0" total="0"/>
+  </runstats>
+</nmaprun>
