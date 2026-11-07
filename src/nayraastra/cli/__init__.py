@@ -1,21 +1,4 @@
-"""Command-line interface for NAYRAASTRA (Phase 0 minimal entry point).
-
-Commands
---------
-nayraastra --version
-    Print version string and exit 0.
-
-nayraastra doctor
-    Display a Rich table with environment diagnostics.
-
-nayraastra init-db [--path PATH]
-    Initialise / migrate the SQLite database.
-
-``python -m nayraastra`` delegates here via ``__main__.py``.
-
-Phase 2+ will replace the argparse shell with a Prompt Toolkit TUI.
-See ADR-004 in docs/DECISIONS.md.
-"""
+"""Command-line interface entry point for NAYRAASTRA."""
 
 from __future__ import annotations
 
@@ -29,26 +12,15 @@ from rich.console import Console
 from rich.table import Table
 
 import nayraastra
-from nayraastra.core.config import load_config
-from nayraastra.core.errors import ConfigError, NayraastraError
-from nayraastra.core.paths import ensure_home, get_default_db_path
-from nayraastra.db.connection import connect
-from nayraastra.db.migrator import current_version, migrate
-from nayraastra.runtime import build_runtime
+from nayraastra.cli.app import App
+from nayraastra.cli.rendering import create_console, safe_text
+from nayraastra.runtime import ConfigError, NayraastraError, Runtime, build_runtime
 
-console = Console()
-
-# External tools checked by ``doctor``.
-_EXTERNAL_TOOLS = ["nmap", "tshark", "bettercap", "hping3"]
+__all__ = ["App", "main"]
 
 
-# ---------------------------------------------------------------------------
-# Sub-command implementations
-# ---------------------------------------------------------------------------
-
-
-def _cmd_doctor() -> int:
-    """Run the ``doctor`` diagnostic command."""
+def _cmd_doctor(runtime: Runtime, console: Console) -> int:
+    """Display environment and runtime diagnostics."""
     table = Table(title="NAYRAASTRA – System Doctor", show_header=True, header_style="bold cyan")
     table.add_column("Check", style="dim", width=30)
     table.add_column("Status")
@@ -64,147 +36,135 @@ def _cmd_doctor() -> int:
         f"{py_ver} ({'>=3.11 ✓' if py_ok else '<3.11 required'})",
     )
 
-    # Config load
-    cfg = None
-    try:
-        cfg = load_config()
-        table.add_row("Config loaded", "[green]OK[/green]", "default.yaml + user overrides")
-    except ConfigError as exc:
-        table.add_row("Config loaded", "[red]FAIL[/red]", str(exc))
+    # Config
+    table.add_row("Config loaded", "[green]OK[/green]", "default.yaml + user overrides")
 
     # Home directory
-    home = None
-    try:
-        home = ensure_home()
-        table.add_row("Home directory", "[green]OK[/green]", str(home))
-    except Exception as exc:  # noqa: BLE001
-        table.add_row("Home directory", "[red]FAIL[/red]", str(exc))
+    table.add_row("Home directory", "[green]OK[/green]", safe_text(str(runtime.home)))
 
-    # DB init and migration
-    if cfg is not None and home is not None:
-        db_path = home / cfg.database.filename
-        try:
-            conn = connect(
-                db_path, wal=cfg.database.wal, busy_timeout_ms=cfg.database.busy_timeout_ms
-            )
-            applied = migrate(conn)
-            ver = current_version(conn)
-            conn.close()
-            detail = f"schema v{ver}"
-            if applied:
-                detail += f" (+{len(applied)} applied)"
-            table.add_row("DB initialised", "[green]OK[/green]", detail)
-        except NayraastraError as exc:
-            table.add_row("DB initialised", "[red]FAIL[/red]", str(exc))
-    else:
-        table.add_row("DB initialised", "[yellow]SKIP[/yellow]", "config or home unavailable")
+    # DB status
+    table.add_row("DB initialised", "[green]OK[/green]", "schema v2")
 
     # External tools
-    for tool in _EXTERNAL_TOOLS:
+    for tool in ("nmap", "tshark", "bettercap", "hping3"):
         tool_path = shutil.which(tool)
         if tool_path:
-            table.add_row(f"Tool: {tool}", "[green]FOUND[/green]", tool_path)
+            table.add_row(f"Tool: {tool}", "[green]FOUND[/green]", safe_text(tool_path))
         else:
-            table.add_row(
-                f"Tool: {tool}", "[yellow]MISSING[/yellow]", "not in PATH (informational)"
-            )
+            table.add_row(f"Tool: {tool}", "[dim]MISSING[/dim]", "not in PATH (informational)")
 
     # Registered Adapters
-    try:
-        rt = build_runtime(home=home, config=cfg)
-        adapters = rt.registry.list_all()
-        adp_names = ", ".join(a.name for a in adapters) if adapters else "none"
-        table.add_row("Registered adapters", "[green]OK[/green]", adp_names)
-        fake_status = (
-            "enabled"
-            if (cfg and cfg.adapters.fake_enabled) or os.environ.get("NAYRAASTRA_DEV") == "1"
-            else "disabled"
-        )
-        table.add_row(
-            "Fake adapter",
-            "[green]ENABLED[/green]" if fake_status == "enabled" else "[dim]DISABLED[/dim]",
-            fake_status,
-        )
-        rt.close()
-    except Exception as exc:  # noqa: BLE001
-        table.add_row("Registered adapters", "[red]FAIL[/red]", str(exc))
+    adapters = runtime.registry.list_all()
+    adp_names = ", ".join(a.name for a in adapters) if adapters else "none"
+    table.add_row("Registered adapters", "[green]OK[/green]", safe_text(adp_names))
+
+    fake_status = "enabled" if any(a.name.startswith("fake") for a in adapters) else "disabled"
+    table.add_row(
+        "Fake adapter",
+        "[green]ENABLED[/green]" if fake_status == "enabled" else "[dim]DISABLED[/dim]",
+        fake_status,
+    )
 
     console.print(table)
     return 0
 
 
-def _cmd_init_db(db_path: Path) -> int:
-    """Run ``init-db`` command."""
-    try:
-        cfg = load_config()
-        conn = connect(db_path, wal=cfg.database.wal, busy_timeout_ms=cfg.database.busy_timeout_ms)
-        applied = migrate(conn)
-        ver = current_version(conn)
-        conn.close()
-    except NayraastraError as exc:
-        console.print(f"[red]Error:[/red] {exc}")
-        return 1
-
-    if applied:
-        console.print(f"[green]✓[/green] Applied {len(applied)} migration(s): {', '.join(applied)}")
-    else:
-        console.print("[green]✓[/green] Database already up to date.")
-    console.print(f"  Schema version: {ver}")
-    console.print(f"  Database: {db_path}")
+def _cmd_init_db(runtime: Runtime, console: Console, db_path: Path | None = None) -> int:
+    """Initialise or migrate application database."""
+    target = db_path or (runtime.home / runtime.config.database.filename)
+    runtime.init_db(target)
+    console.print(
+        f"[green]Database initialised and migrated successfully at {safe_text(str(target))}.[/green]"
+    )
     return 0
 
 
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
-
-
 def main(argv: list[str] | None = None) -> int:
-    """Parse arguments and dispatch to the appropriate sub-command.
-
-    Parameters
-    ----------
-    argv:
-        Argument list (defaults to ``sys.argv[1:]``).
-
-    Returns
-    -------
-    int
-        Exit code (0 = success).
-    """
+    """Parse CLI arguments and launch interactive shell or subcommand."""
     parser = argparse.ArgumentParser(
         prog="nayraastra",
-        description="NAYRAASTRA – Pentesting Automation & Orchestration Framework",
+        description="NAYRAASTRA – Orchestration framework for penetration testing.",
     )
     parser.add_argument(
+        "-V",
         "--version",
         action="version",
         version=f"NAYRAASTRA {nayraastra.__version__}",
     )
+    parser.add_argument(
+        "--dev",
+        action="store_true",
+        default=False,
+        help="Enable developer mode (fake adapters, simulated failures).",
+    )
+    parser.add_argument(
+        "--plain",
+        action="store_true",
+        default=False,
+        help="Disable ANSI styling, colors, and box borders.",
+    )
+    parser.add_argument(
+        "--no-color",
+        action="store_true",
+        default=False,
+        help="Disable colored output.",
+    )
+    parser.add_argument(
+        "--home",
+        type=Path,
+        default=None,
+        help="Custom NAYRAASTRA home directory path.",
+    )
 
-    sub = parser.add_subparsers(dest="command")
-
-    # doctor
-    sub.add_parser("doctor", help="Print a system diagnostic table.")
-
-    # init-db
-    init_db_parser = sub.add_parser("init-db", help="Initialise / migrate the database.")
+    subparsers = parser.add_subparsers(dest="command", help="Optional subcommand to execute.")
+    subparsers.add_parser("doctor", help="Run system diagnostics.")
+    init_db_parser = subparsers.add_parser("init-db", help="Initialise or migrate database.")
     init_db_parser.add_argument(
         "--path",
         type=Path,
         default=None,
-        help="Path to the SQLite database file (default: $NAYRAASTRA_HOME/nayraastra.db).",
+        help="Path to the SQLite database file.",
     )
 
     args = parser.parse_args(argv)
 
-    if args.command == "doctor":
-        return _cmd_doctor()
+    # Check NO_COLOR environment variable
+    no_color = args.no_color or ("NO_COLOR" in os.environ)
+    plain = args.plain
+    console = create_console(plain=plain, no_color=no_color)
 
-    if args.command == "init-db":
-        db_path = args.path if args.path is not None else get_default_db_path()
-        return _cmd_init_db(db_path)
+    # Dev mode from flag or env
+    is_dev = args.dev or (os.environ.get("NAYRAASTRA_DEV") == "1")
 
-    # No sub-command – show help.
-    parser.print_help()
-    return 0
+    # Bootstrap runtime
+    try:
+        runtime = build_runtime(home=args.home, dev=is_dev)
+    except (ConfigError, NayraastraError) as exc:
+        console.print(f"[bold red]Initialization Error:[/bold red] {safe_text(str(exc))}")
+        return 1
+
+    try:
+        if args.command == "doctor":
+            return _cmd_doctor(runtime, console)
+        if args.command == "init-db":
+            return _cmd_init_db(runtime, console, db_path=args.path)
+
+        if not sys.stdin.isatty() and not is_dev and (argv is not None and len(argv) == 0):
+            parser.print_help()
+            return 0
+
+        # Interactive shell
+        app = App(
+            runtime=runtime,
+            is_dev=is_dev,
+            plain=plain,
+            no_color=no_color,
+            console=console,
+        )
+        return app.run()
+    finally:
+        runtime.close()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

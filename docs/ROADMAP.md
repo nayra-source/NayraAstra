@@ -35,7 +35,24 @@
 
 ---
 
-## Phase 2 — Real Tool Adapters & Workflow Engine *(next)*
+## Phase 2 — CLI Interactive Shell *(completed)*
+
+**Goal:** Keyboard-driven interactive CLI (SEToolkit-style numeric navigation) built as a thin shell over `Runtime` using Prompt Toolkit and Rich.
+
+**Exit criteria:**
+- [x] Keyboard-only interactive navigation with universal controls (`0`/`Esc` Back, `?` Help, `/` Filter, `Ctrl+L` Redraw, `Ctrl+C` Cancel, `q` Quit).
+- [x] Numeric selection rules: single keypress for $\le 9$ items, multi-digit with `Enter` for $> 9$ items.
+- [x] Persistent Prompt Toolkit status bar displaying engagement name, scope count, ROE intrusiveness ceiling, dry-run mode, live task counters, and time-window state.
+- [x] Untrusted string sanitization with central `safe_text()` (strips ANSI, control chars, bidi overrides, escapes Rich markup).
+- [x] Full screen stack: Main Menu, Engagement Wizard, Category Menus (Recon, Enumeration, Analysis), Run Flow (Target, Plan preview, Live output streaming via Event Bus, Result view), Tasks & Audit Log with tamper-evident chain verification badge, Settings & Environment.
+- [x] AST architecture verification ensuring `cli` never imports `db`, `adapters`, or `subprocess`.
+- [x] Full two-session E2E integration test (`tests/integration/test_phase2_cli_e2e.py`) validating engagement creation, scope gating, task execution, audit trail, workspace persistence, and reload.
+- [x] UX Guide (`docs/UX_GUIDE.md`) and Manual QA script (`docs/MANUAL_QA.md`).
+- [x] All 251 tests passing, strict mypy green, ruff format/lint clean.
+
+---
+
+## Phase 3 — Real Tool Adapters & Workflow Engine *(next)*
 
 **Goal:** First real tool adapters (Nmap, TShark), YAML workflow DAG engine, parallel scheduling, and Prompt Toolkit TUI.
 

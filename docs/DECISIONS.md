@@ -257,3 +257,68 @@ Scope Guard CIDR containment, IP normalization, and wildcard domain matching are
 
 ### Decision
 Include `hypothesis` in optional `dev` dependencies. Use property-based testing in `tests/unit/test_scope.py` to assert idempotency, CIDR invariants, and invalid IP boundary rejection across thousands of randomized inputs. Zero runtime dependencies are added.
+
+---
+
+## ADR-015: Prompt Toolkit for Input, Rich for Output (No Textual Framework)
+
+**Date:** 2026-11-07
+**Status:** Accepted
+
+### Context
+Phase 2 builds the interactive terminal shell. Options considered:
+1. Textual: heavy async TUI framework, widget-driven, complex state management, mouse-centric paradigms, and heavy runtime footprint.
+2. Curses / Urwid: low-level, awkward cross-platform terminal handling.
+3. Prompt Toolkit + Rich: already approved runtime dependencies in `pyproject.toml`.
+
+### Decision
+Use `prompt_toolkit` exclusively for keybindings, numeric choice listening, text line editing, and bottom toolbar rendering. Use `rich` exclusively for styled console rendering, tables, panels, breadcrumbs, and live progress bars. Textual is explicitly excluded.
+
+### Consequences
+Zero new runtime dependencies. Full control over the terminal lifecycle and layout. Clean testability via `ScriptedInputDriver`.
+
+---
+
+## ADR-016: View-Model / Renderer Split and Untrusted String Sanitization
+
+**Date:** 2026-11-07
+**Status:** Accepted
+
+### Context
+The CLI renders data originating from untrusted sources (target names, raw tool outputs, command arguments, engagement notes). Rendering raw strings via Rich or printing them directly could trigger unintended terminal formatting (Rich markup injection), ANSI escape code injection, cursor manipulation, or directional character spoofing (bidi overrides).
+
+### Decision
+1. Separation of Concerns: Views compute pure data `ViewModel` structures, and renderers convert view-models into Rich renderables.
+2. Central Sanitizer: Implement `safe_text(raw, allow_newlines=False)` in `nayraastra.cli.rendering`. It strips ANSI escape sequences, strips ASCII control characters (preserving newline/tab only when requested), removes Unicode bidi directional overrides, and escapes Rich markup via `rich.markup.escape`. Every string from targets, tool output, or engagement fields must pass through `safe_text()`.
+
+### Consequences
+Prevents terminal injection attacks and rendering corruption. Enforced by unit tests in `tests/unit/test_cli_safe_text.py`.
+
+---
+
+## ADR-017: Interactive Event Loop Ownership and Synchronous CLI Bridge
+
+**Date:** 2026-11-07
+**Status:** Accepted
+
+### Context
+The underlying `Runtime` services and adapters rely on `asyncio` (e.g. for scheduler execution, rate limiting, and process timeouts). The CLI entrypoint `nayraastra` is invoked synchronously by console scripts.
+
+### Decision
+The top-level `App` class exposes an `async def run_async() -> int` loop managing the screen stack and Prompt Toolkit drivers, and a synchronous `def run() -> int` method that initializes and runs the `asyncio` event loop via `asyncio.run()`. Subcommands (`doctor`, `init-db`, `--version`) execute synchronously without starting the interactive loop.
+
+---
+
+## ADR-018: Single-Key Immediate Selection ($\le 9$ items) vs. Enter Confirmation ($> 9$ items)
+
+**Date:** 2026-11-07
+**Status:** Accepted
+
+### Context
+A core goal of SEToolkit-style keyboard navigation is fast, ergonomic interaction without requiring the operator to hit `Enter` after every single menu selection, while simultaneously supporting menus/lists that exceed 9 items.
+
+### Decision
+Implement numeric selection rules based on item count:
+1. For screens with $\le 9$ items, single digit keypresses (`1`–`9`, `0`) are captured immediately by Prompt Toolkit keybindings without requiring `Enter`.
+2. For screens or lists with $> 9$ items (such as large engagement lists or long task histories), input mode switches to multi-digit entry requiring `Enter` confirmation.
+3. Invalid inputs display an inline hint without crashing or resetting the screen stack.

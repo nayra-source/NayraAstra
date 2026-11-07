@@ -9,17 +9,17 @@ logic itself.
 
 ---
 
-## Status: Phase 1 — Core Skeleton & Safety Spine
+## Status: Phase 2 — Interactive CLI Shell
 
-Phase 1 is complete. The safety-critical core engine is operational:
-- **Per-Engagement Workspaces**: Isolated SQLite database, artifacts, and logs per engagement (`ADR-010`).
-- **Scope Guard & ROE Gate**: Strict target normalization, deny-by-default CIDR containment, wildcard subdomains, and DNS rebinding prevention.
-- **Tamper-Evident Audit Log**: SHA-256 hash chaining, sensitive key redaction, and database-level trigger immutability (`ADR-011`).
-- **Adapter Contracts & Process Runner**: Safe non-shell execution (`shell=False`), process group termination, and deterministic synthetic fake adapters.
-- **Sequential Scheduler & Typed Event Bus**: Clamped single-worker execution with rate limiting, fault-isolated in-process events, and clean terminal state transitions.
-- **Composition Root**: `src/nayraastra/runtime.py` wires concrete repositories and services while keeping `core` cleanly isolated (`ADR-009`).
+Phase 2 is complete. The keyboard-driven interactive CLI shell is operational:
+- **SEToolkit-Style Numeric Navigation**: Single-key selection for $\le 9$ items, multi-digit entry with `Enter` for $> 9$ items, universal `0`/`Esc` Back, and persistent breadcrumbs.
+- **Persistent Telemetry Status Bar**: Real-time status bar showing active engagement, defined scope count, ROE intrusiveness ceiling, dry-run mode, task counters, and time-window state.
+- **Untrusted String Sanitization**: Central `safe_text()` sanitizer stripping ANSI escape sequences, control characters, bidi overrides, and escaping Rich markup.
+- **Complete Screen Stack**: Interactive Engagement Wizard, Category capability menus with locked indicators, Run Flow (Target selection, Scope Guard pre-check, Plan preview, streaming Live execution, and Result view), Tasks & Audit Log with tamper-evident chain verification badge, and Settings/Diagnostics.
+- **Strict Layer Isolation**: `cli` contains zero business logic and imports only `Runtime` and public domain models (never `db`, `adapters`, or `subprocess`), enforced by AST tests.
+- **Comprehensive Docs & QA**: Full UX Guide (`docs/UX_GUIDE.md`) and step-by-step Manual QA Script (`docs/MANUAL_QA.md`).
 
-See [`docs/ROADMAP.md`](docs/ROADMAP.md) and [`docs/SAFETY_MODEL.md`](docs/SAFETY_MODEL.md).
+See [`docs/ROADMAP.md`](docs/ROADMAP.md), [`docs/UX_GUIDE.md`](docs/UX_GUIDE.md), and [`docs/SAFETY_MODEL.md`](docs/SAFETY_MODEL.md).
 
 ---
 

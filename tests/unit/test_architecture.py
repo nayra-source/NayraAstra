@@ -96,3 +96,29 @@ class TestArchitectureLayers:
                     violations.append(f"{py_file.name} imports forbidden: {imp}")
 
         assert not violations, "Layer violations in db:\n" + "\n".join(violations)
+
+    def test_cli_imports_no_forbidden_layers(self) -> None:
+        cli_dir = _PACKAGE_ROOT / "cli"
+        forbidden = (
+            "nayraastra.db",
+            "nayraastra.adapters",
+            "nayraastra.modules",
+            "subprocess",
+        )
+
+        violations: list[str] = []
+        for py_file in cli_dir.rglob("*.py"):
+            tree = ast.parse(py_file.read_text(encoding="utf-8"), filename=str(py_file))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    for alias in node.names:
+                        if any(
+                            alias.name == f or alias.name.startswith(f + ".") for f in forbidden
+                        ):
+                            violations.append(f"{py_file.name} imports forbidden: {alias.name}")
+                elif isinstance(node, ast.ImportFrom):
+                    mod = node.module or ""
+                    if any(mod == f or mod.startswith(f + ".") for f in forbidden):
+                        violations.append(f"{py_file.name} imports forbidden: {mod}")
+
+        assert not violations, "Layer violations in cli:\n" + "\n".join(violations)

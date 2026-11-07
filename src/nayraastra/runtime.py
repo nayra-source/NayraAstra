@@ -15,13 +15,16 @@ from nayraastra.adapters.fake.adapter import FakeAdapter, FakeDisruptiveAdapter
 from nayraastra.adapters.nmap import NmapAdapter
 from nayraastra.adapters.registry import AdapterRegistry
 from nayraastra.core.audit.logger import AuditLogger
+from nayraastra.core.audit.verifier import verify_chain
 from nayraastra.core.config import AppConfig, load_config
 from nayraastra.core.domain.time_id import Clock, IdGenerator, UtcClock, UuidGenerator
 from nayraastra.core.engagement.service import EngagementService
+from nayraastra.core.errors import ConfigError, NayraastraError, ValidationFailure
 from nayraastra.core.events.bus import EventBus
 from nayraastra.core.paths import get_home, get_workspace_dir
-from nayraastra.core.ports import WorkspaceProvider
+from nayraastra.core.ports import ToolAdapterPort, WorkspaceProvider
 from nayraastra.core.scope.authorizer import TaskAuthorizer
+from nayraastra.core.scope.normalize import normalize_target
 from nayraastra.core.tasks.scheduler import Scheduler
 from nayraastra.core.tasks.service import TaskService
 from nayraastra.db.connection import connect
@@ -32,6 +35,19 @@ from nayraastra.db.repositories.engagement_repo import SqliteEngagementRepositor
 from nayraastra.db.repositories.observation_repo import SqliteObservationRepository
 from nayraastra.db.repositories.scope_repo import SqliteScopeRepository
 from nayraastra.db.repositories.task_repo import SqliteTaskRepository
+
+__all__ = [
+    "ConfigError",
+    "DefaultWorkspaceProvider",
+    "NayraastraError",
+    "Runtime",
+    "Session",
+    "ToolAdapterPort",
+    "ValidationFailure",
+    "build_runtime",
+    "normalize_target",
+    "verify_chain",
+]
 
 
 class DefaultWorkspaceProvider:
@@ -180,6 +196,17 @@ class Runtime:
             events=self.events,
             registry=self.registry,
         )
+
+    def init_db(self, db_path: Path) -> None:
+        """Initialize and migrate an arbitrary SQLite database path."""
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        conn = connect(
+            db_path,
+            wal=self.config.database.wal,
+            busy_timeout_ms=self.config.database.busy_timeout_ms,
+        )
+        migrate(conn)
+        conn.close()
 
     def close(self) -> None:
         """Release runtime resources."""

@@ -121,6 +121,47 @@ In-process typed events published across task lifecycle:
 
 ---
 
+## Interactive CLI Shell Architecture (Phase 2, ADR-015–018)
+
+NAYRAASTRA's interactive shell (`nayraastra.cli`) is a thin, keyboard-driven navigation layer over `Runtime`:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                       App Event Loop                        │
+│                 (asyncio / InputDriver)                     │
+└──────────────┬──────────────────────────────┬───────────────┘
+               │                              │
+┌──────────────▼──────────────┐ ┌─────────────▼───────────────┐
+│     Navigator (Stack LIFO)  │ │      Prompt Toolkit         │
+│   Screen Transitions        │ │   Keybindings / Toolbar     │
+│   [Push, Pop, Replace, Stay]│ │   (Single-key <=9, Enter >9)│
+└──────────────┬──────────────┘ └─────────────────────────────┘
+               │
+┌──────────────▼──────────────────────────────────────────────┐
+│                    Interactive Screens                      │
+│   - MainMenuScreen                                          │
+│   - EngagementScreen & EngagementWizardScreen               │
+│   - ModuleMenuScreen (Capabilities with locking badges)     │
+│   - RunFlowScreen (Target, Plan preview, Live output, Done) │
+│   - TasksScreen & AuditScreen (Verification badge & search) │
+│   - SettingsScreen (Config, Live scope edit, Doctor)        │
+│   - HelpScreen (Global ? overlay)                           │
+└──────────────┬──────────────────────────────────────────────┘
+               │
+┌──────────────▼──────────────────────────────────────────────┐
+│                      Rich Rendering                         │
+│   - safe_text() sanitization (strips ANSI, NUL, escapes)    │
+│   - Breadcrumbs, Semantic Status Bar, Tables, Live Panels   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Architecture Constraints:**
+- **Zero Business Logic in CLI**: The CLI is purely presentational and dispatches all operations to `Runtime` and public domain models.
+- **Strict AST Layer Enforcement**: `tests/unit/test_architecture.py` asserts that `cli` never imports from `nayraastra.db`, `nayraastra.adapters`, or calls `subprocess`.
+- **String Sanitization**: Every string from targets, tool output, or engagements is sanitized with `safe_text()` before Rich rendering.
+
+---
+
 ## Safety Model
 
 See [SAFETY_MODEL.md](file:///Users/aryan/Documents/NayraAstra/docs/SAFETY_MODEL.md) for full specifications of Scope Guard CIDR containment, ROE boundary checks, intrusiveness ceilings, argument injection defenses, and tamper-evident audit chaining.
